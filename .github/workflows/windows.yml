@@ -1,0 +1,75 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            desktop/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm ci --prefix desktop
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $version = (Get-Content desktop/package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag does not match desktop/package.json version' }
+      - name: Build application
+        run: npm run desktop:dir
+      - name: Install test browser
+        run: npx playwright install chromium
+      - name: Test
+        run: npm test
+        env:
+          QR_ETIKETKA_DISABLE_UPDATES: '1'
+      - name: Package installer and portable app
+        run: npx electron-builder --config electron-builder.yml --win --x64 --prepackaged release/win-unpacked --publish never
+      - name: Keep installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows
+          path: |
+            release/*.exe
+            release/*.blockmap
+            release/latest.yml
+          if-no-files-found: error
+      - name: Publish complete release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $files = Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe', '.blockmap' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName }
+          gh release view $tag --json isDraft *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --draft --verify-tag --title "QR Этикетка $tag" --notes-file RELEASE_NOTES.md
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } else {
+            $draft = gh release view $tag --json isDraft --jq '.isDraft'
+            if ($draft -ne 'true') { throw 'A published release already exists; create a new version instead of overwriting it' }
+          }
+          gh release upload $tag @files --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

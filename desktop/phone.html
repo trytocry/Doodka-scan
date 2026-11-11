@@ -1,0 +1,23 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Фото для QR Этикетки</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fb;color:#1d2d48;font:17px/1.5 system-ui,sans-serif}main{max-width:480px;margin:32px auto;padding:24px}h1{font-size:30px;line-height:1.15}p{color:#52627a}label{display:block;background:#215cce;color:white;border-radius:10px;padding:16px;text-align:center;font-weight:600;margin:14px 0;cursor:pointer}label.secondary{background:#dce7fc;color:#204b98}input{position:absolute;width:1px;height:1px;clip-path:inset(50%)}label:focus-within{outline:3px solid #6389d0}#status{white-space:pre-wrap}small{color:#52627a}img{display:block;max-width:100%;max-height:280px;margin:auto}img[hidden]{display:none}</style></head><body><main><h1>Передайте фото<br>на компьютер</h1><p>Один QR или Data Matrix в кадре, целиком и без бликов.</p><label>Сфотографировать<input id="camera" type="file" accept="image/*" capture="environment"></label><label class="secondary">Выбрать из галереи<input id="gallery" type="file" accept="image/*"></label><img id="preview" hidden alt="Выбранное фото"><p id="status" role="status" aria-live="polite">Выберите фото — оно автоматически появится в программе QR Этикетка.</p><small>Передача по вашей локальной сети. Окно «Добавить с телефона» на компьютере должно оставаться открытым.</small></main><script>
+let busy=false,previewURL;
+for(const id of ['camera','gallery']) document.getElementById(id).onchange=async event=>{
+ const file=event.target.files[0];event.target.value='';if(!file||busy)return;
+ const status=document.getElementById('status');
+ if(file.size>25*1024*1024){status.textContent='Фото больше 25 МБ. Выберите уменьшенное изображение.';return;}
+ busy=true;document.querySelectorAll('input').forEach(x=>x.disabled=true);status.textContent='Передаём фото…';
+ try{
+  let upload=file;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+   const url=URL.createObjectURL(file);
+   try{const img=new Image();img.src=url;await img.decode();const scale=Math.min(1,2200/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);upload=await new Promise(r=>c.toBlob(r,'image/jpeg',0.95));if(!upload)throw Error();}
+   catch{throw Error('Не удалось открыть этот формат. Сохраните фото в JPG или сделайте новый снимок.');}finally{URL.revokeObjectURL(url);}
+  }
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),45000);
+  try{const response=await fetch(location.pathname+'/upload',{method:'POST',headers:{'Content-Type':upload.type},body:upload,signal:controller.signal});const message=await response.text();if(!response.ok)throw Error(message);status.textContent=message;}
+  finally{clearTimeout(timer);}
+  if(previewURL)URL.revokeObjectURL(previewURL);previewURL=URL.createObjectURL(upload);document.getElementById('preview').src=previewURL;document.getElementById('preview').hidden=false;
+ }catch(e){status.textContent=e.name==='TypeError'||e.name==='AbortError'?'Нет связи с компьютером. Проверьте Wi-Fi и откройте новую QR-ссылку в программе.':e.message;}
+ finally{busy=false;document.querySelectorAll('input').forEach(x=>x.disabled=false);}
+};</script></body></html>
+

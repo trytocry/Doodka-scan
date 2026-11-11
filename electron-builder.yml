@@ -1,0 +1,32 @@
+appId: local.qr.etiketka
+productName: QR Этикетка
+directories:
+  app: desktop
+  output: release
+files:
+  - '*.cjs'
+  - phone.html
+  - package.json
+  - app/**/*
+asar: true
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  signAndEditExecutable: false
+nsis:
+  artifactName: QR-Etiketka-Setup-${version}-x64.exe
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: QR-Etiketka-Portable-${version}-x64.exe
+  requestExecutionLevel: user
+publish:
+  provider: github
+  owner: trytocry
+  repo: Doodka-scan
+  releaseType: draft
