@@ -9,6 +9,9 @@ files:
   - package.json
   - app/**/*
 asar: true
+extraResources:
+  - from: desktop/app-update.yml
+    to: app-update.yml
 win:
   target:
     - target: nsis

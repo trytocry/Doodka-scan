@@ -1,0 +1,4 @@
+provider: github
+owner: trytocry
+repo: Doodka-scan
+updaterCacheDirName: qr-etiketka-updater

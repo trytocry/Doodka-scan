@@ -37,6 +37,8 @@ jobs:
           if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag does not match desktop/package.json version' }
       - name: Build application
         run: npm run desktop:dir
+      - name: Verify update configuration
+        run: node scripts/verify-desktop.mjs
       - name: Install test browser
         run: npx playwright install chromium
       - name: Test
