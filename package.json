@@ -1,13 +1,13 @@
 {
   "name": "doodka-scan",
-  "version": "1.3.1",
+  "version": "1.5.3",
   "description": "QR-коды с фотографии в PDF этикетки 20×20 мм",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build --base=./",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "npm run test:updates && playwright test",
+    "test": "npm run test:updates && node --test tests/unit/readiness.cjs && playwright test",
     "test:updates": "node --test tests/unit/updates.cjs",
     "desktop:dir": "npm run build && node scripts/prepare-desktop.mjs && electron-builder --config electron-builder.yml --win --x64 --dir --publish never",
     "desktop:package": "npm run desktop:dir && electron-builder --config electron-builder.yml --win --x64 --prepackaged release/win-unpacked --publish never"

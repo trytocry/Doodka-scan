@@ -1,11 +1,12 @@
 appId: local.qr.etiketka
-productName: QR Этикетка
+productName: QR Duplicator
 directories:
   app: desktop
   output: release
 files:
   - '*.cjs'
   - phone.html
+  - splash.html
   - package.json
   - app/**/*
 asar: true
@@ -13,20 +14,24 @@ extraResources:
   - from: desktop/app-update.yml
     to: app-update.yml
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
     - target: portable
       arch: [x64]
-  signAndEditExecutable: false
+  signAndEditExecutable: true
+  signExecutable: false
 nsis:
-  artifactName: QR-Etiketka-Setup-${version}-x64.exe
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  artifactName: QR-Duplicator-Setup-${version}-x64.exe
   oneClick: true
   perMachine: false
   createDesktopShortcut: always
   deleteAppDataOnUninstall: false
 portable:
-  artifactName: QR-Etiketka-Portable-${version}-x64.exe
+  artifactName: QR-Duplicator-Portable-${version}-x64.exe
   requestExecutionLevel: user
 publish:
   provider: github

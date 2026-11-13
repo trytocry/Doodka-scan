@@ -3,14 +3,24 @@ import QRCode from 'qrcode';
 import { PDFDocument } from 'pdf-lib';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const { printHTML } = require('../desktop/printing.cjs');
+async function mainPage(application) {
+  await expect.poll(() => application.windows().some(page => /\/app\/index\.html$/.test(page.url()))).toBe(true);
+  const page = application.windows().find(page => /\/app\/index\.html$/.test(page.url()));
+  await expect.poll(() => application.evaluate(({ BrowserWindow }) => {
+    const windows = BrowserWindow.getAllWindows();
+    return windows.length === 1 && windows[0].isVisible();
+  })).toBe(true);
+  return page;
+}
 
 test('Настольная сборка работает без сети и сохраняет PDF', async () => {
-  const application = await electron.launch({ executablePath: path.resolve('release/win-unpacked/QR Этикетка.exe'), env: { ...process.env, QR_ETIKETKA_DISABLE_UPDATES: '1' } });
+  const application = await electron.launch({ executablePath: path.resolve('release/win-unpacked/QR Duplicator.exe'), args: [`--user-data-dir=${path.resolve('test-results/profiles', randomUUID())}`], env: { ...process.env, QR_ETIKETKA_DISABLE_UPDATES: '1' } });
   try {
-    const page = await application.firstWindow();
+    const page = await mainPage(application);
     await page.context().setOffline(true);
     await expect(page.locator('h1')).toContainText('в готовую наклейку');
     expect(page.url()).toMatch(/^file:/);
@@ -37,10 +47,10 @@ test('Настольная сборка работает без сети и со
 });
 
 test('Передача с мобильной страницы и печать без отправки реальному принтеру', async ({ browser }) => {
-  const application = await electron.launch({ executablePath: path.resolve('release/win-unpacked/QR Этикетка.exe'), env: { ...process.env, QR_ETIKETKA_DISABLE_UPDATES: '1' } });
+  const application = await electron.launch({ executablePath: path.resolve('release/win-unpacked/QR Duplicator.exe'), args: [`--user-data-dir=${path.resolve('test-results/profiles', randomUUID())}`], env: { ...process.env, QR_ETIKETKA_DISABLE_UPDATES: '1' } });
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
   try {
-    const page = await application.firstWindow();
+    const page = await mainPage(application);
     await page.locator('#phone').click();
     await expect(page.locator('#phone-address')).not.toBeEmpty();
     const url = await page.locator('#phone-address').inputValue();

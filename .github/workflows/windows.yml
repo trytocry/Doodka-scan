@@ -65,7 +65,7 @@ jobs:
           $files = Get-ChildItem release -File | Where-Object { $_.Extension -in '.exe', '.blockmap' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName }
           gh release view $tag --json isDraft *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --draft --verify-tag --title "QR Этикетка $tag" --notes-file RELEASE_NOTES.md
+            gh release create $tag --draft --verify-tag --title "QR Duplicator $tag" --notes-file RELEASE_NOTES.md
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           } else {
             $draft = gh release view $tag --json isDraft --jq '.isDraft'

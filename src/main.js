@@ -1,8 +1,13 @@
 import { recognize } from './recognize.js';
+import { photoError, setupPhotoInput } from './photo-input.js';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings } from './label-settings.js';
 import QRCode from 'qrcode';
 import './desktop.css';
 import { makeMatrix, layout, drawLabel, createPDF } from './core.js';
 import './style.css';
+import './glass.css';
+import { setupReadiness } from './readiness.js';
+setupReadiness();
 const $ = id => document.getElementById(id);
 let matrix = null, currentPlan = null, generation = 0, busy = false;
 const sourcePreview = document.createElement('details');
@@ -28,14 +33,15 @@ function update() {
   }
 }
 async function readPhoto(file) {
+  if (!file) return;
+  const inputError = photoError(file);
+  if (inputError) { status(inputError, 'error'); return; }
   const token = ++generation;
   matrix = null; currentPlan = null; $('content').hidden = true; $('decoded').textContent = ''; $('qr').hidden = true; $('empty').hidden = false;
   sourcePreview.hidden = true; sourcePreview.open = false;
   $('actual').textContent = 'Добавьте фото, чтобы подготовить файл.'; update();
-  if (!file) return;
   $('file-name').textContent = file.name;
-  if (file.size > 25 * 1024 * 1024) { status('Файл больше 25 МБ. Выберите уменьшенную фотографию.', 'error'); return; }
-  status('Распознаём QR-код…');
+  status('Распознаём QR или Data Matrix…');
   const url = URL.createObjectURL(file);
   try {
     const img = new Image(); img.src = url;
@@ -57,7 +63,18 @@ async function readPhoto(file) {
   } finally { URL.revokeObjectURL(url); }
 }
 for (const id of ['photo', 'camera']) $(id).addEventListener('change', event => { const file = event.target.files[0]; if (file) readPhoto(file); event.target.value = ''; });
-for (const id of ['size', 'copies']) $(id).addEventListener('input', update);
+setupPhotoInput({ zone: document.querySelector('.upload'), accept: readPhoto, reject: message => status(message, 'error') });
+const restoredSettings = loadSettings();
+$('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
+for (const id of ['size', 'copies']) $(id).addEventListener('input', () => {
+  saveSettings({ version: 1, size: Number($('size').value), copies: Number($('copies').value) });
+  update();
+});
+$('reset-settings').onclick = () => {
+  $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
+  saveSettings(DEFAULT_SETTINGS); update();
+};
+update();
 $('download').addEventListener('click', async () => {
   if (!matrix || !currentPlan || busy) return;
   const selectedMatrix = matrix, selectedPlan = currentPlan;
@@ -71,15 +88,23 @@ $('download').addEventListener('click', async () => {
 if (window.desktop) {
   const updateBar = document.createElement('section');
   updateBar.className = 'update-bar'; updateBar.setAttribute('aria-label', 'Обновления программы');
-  updateBar.innerHTML = '<span id="app-version"></span><span id="update-message" role="status"></span><button id="check-update" class="button secondary">Проверить обновления</button><button id="install-update" class="button" hidden>Перезапустить и обновить</button>';
+  updateBar.innerHTML = '<span id="app-version"></span><span id="update-message" role="status"></span><label class="auto-update-setting"><input id="auto-updates" type="checkbox" disabled>Обновлять автоматически</label><button id="check-update" class="button secondary">Проверить обновления</button><button id="install-update" class="button" hidden>Перезапустить и обновить</button>';
   document.querySelector('footer').before(updateBar);
   const showUpdates = state => {
     $('app-version').textContent = `Версия ${state.version}`;
+    $('auto-updates').checked = Boolean(state.enabled && state.automatic);
+    $('auto-updates').disabled = !state.enabled;
     $('update-message').textContent = state.message;
     $('check-update').disabled = ['disabled', 'checking', 'downloading', 'ready'].includes(state.status);
     $('install-update').hidden = state.status !== 'ready';
   };
   window.desktop.onUpdate(showUpdates);
+  $('auto-updates').onchange = async () => {
+    const value = $('auto-updates').checked;
+    $('auto-updates').disabled = true;
+    try { showUpdates(await window.desktop.setAutoUpdates(value)); }
+    catch { $('auto-updates').checked = !value; $('auto-updates').disabled = false; $('update-message').textContent = 'Не удалось сохранить настройку обновлений. Повторите попытку.'; }
+  };
   window.desktop.updateState().then(showUpdates).catch(() => { $('update-message').textContent = 'Состояние обновления недоступно.'; });
   $('check-update').onclick = async () => {
     $('check-update').disabled = true;
@@ -116,7 +141,7 @@ if (window.desktop) {
   phoneDialog.addEventListener('close', () => { $('phone-qr').hidden = false; window.desktop.stopPhone().catch(() => {}); });
   window.desktop.onPhoneClosed(() => { $('phone-status').textContent = 'Ссылка истекла. Закройте окно и нажмите «Добавить с телефона» снова.'; $('phone-qr').hidden = true; });
   window.desktop.onPhoto(async data => {
-    $('phone-status').textContent = 'Фото получено. Распознаём QR-код…';
+    $('phone-status').textContent = 'Фото получено. Распознаём QR или Data Matrix…';
     await readPhoto(new File([data.bytes], 'Фото с телефона', { type: data.type }));
     $('phone-status').textContent = $('status').textContent;
     if (matrix) phoneDialog.close();
@@ -147,4 +172,5 @@ if (window.desktop) {
     } catch (e) { $('print-status').textContent = 'Не удалось напечатать: ' + e.message; }
     finally { $('confirm-print').disabled = false; }
   };
+  window.desktop.ready?.();
 }

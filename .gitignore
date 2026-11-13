@@ -2,6 +2,8 @@ node_modules/
 dist/
 test-results/
 playwright-report/
+qa-artifacts/
+qa-results/
 desktop/app/
 release/
 .env
@@ -10,3 +12,7 @@ release/
 *.log
 *.pfx
 *.pem
+
+# Локальные пробы шрифтов, не ресурсы приложения.
+design/*-reference.png
+design/render-font*-reference.cjs

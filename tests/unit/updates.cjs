@@ -35,3 +35,33 @@ test('Переносимая версия не обращается за обн�
   assert.equal((await controller.check()).status, 'disabled');
   assert.throws(() => controller.install(), /не загружено/);
 });
+
+test('Выключенная настройка блокирует фоновую проверку и установку, но сохраняет ручную проверку', async () => {
+  const updater = new EventEmitter(); let calls = 0, saved;
+  updater.checkForUpdates = async () => { calls++; assert.equal(updater.autoDownload, true); updater.emit('update-available', { version: '2.0.0' }); updater.emit('update-downloaded', { version: '2.0.0' }); };
+  const controller = createUpdates({ updater, enabled: true, version: '1.5.0', automatic: false, saveAutomatic: value => { saved = value; } });
+  assert.equal(updater.autoInstallOnAppQuit, false);
+  await controller.check({ automatic: true }); assert.equal(calls, 0);
+  await controller.check(); assert.equal(calls, 1);
+  assert.match(controller.state().message, /Нажмите/);
+  controller.setAutomatic(true); assert.equal(saved, true); assert.equal(updater.autoInstallOnAppQuit, true);
+  assert.match(controller.state().message, /при закрытии/);
+  controller.setAutomatic(false); assert.equal(updater.autoInstallOnAppQuit, false);
+  assert.throws(() => controller.setAutomatic('true'), /Некорректное/);
+});
+
+test('Выключение во время фоновой проверки запрещает последующее автоматическое скачивание', async () => {
+  const updater = new EventEmitter(); let finish;
+  updater.checkForUpdates = () => new Promise(resolve => { finish = () => { updater.emit('update-available', { version: '2.0.0' }); resolve(); }; });
+  const controller = createUpdates({ updater, enabled: true, version: '1.5.0' });
+  const pending = controller.check({ automatic: true });
+  controller.setAutomatic(false); assert.equal(updater.autoDownload, false);
+  finish(); await pending; assert.equal(controller.state().status, 'available');
+});
+
+test('Ошибка сохранения настройки не меняет текущий режим', () => {
+  const updater = new EventEmitter();
+  const controller = createUpdates({ updater, enabled: true, version: '1.5.0', saveAutomatic: () => { throw Error('write failed'); } });
+  assert.throws(() => controller.setAutomatic(false), /write failed/);
+  assert.equal(controller.state().automatic, true); assert.equal(updater.autoInstallOnAppQuit, true);
+});
