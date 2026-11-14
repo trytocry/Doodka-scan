@@ -1,7 +1,7 @@
 {
   "name": "doodka-scan",
-  "version": "1.5.3",
-  "description": "QR-коды с фотографии в PDF этикетки 20×20 мм",
+  "version": "1.5.4",
+  "description": "QR и Data Matrix с фотографий: наклейки от 20 до 100 мм, PDF и печать",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

@@ -1,7 +1,7 @@
 {
   "name": "qr-etiketka",
-  "version": "1.5.3",
-  "description": "QR-коды с фотографий в PDF для наклеек 20 × 20 мм",
+  "version": "1.5.4",
+  "description": "QR и Data Matrix с фотографий: наклейки от 20 до 100 мм, PDF и печать",
   "main": "main.cjs",
   "author": "TryTocry",
   "private": true,

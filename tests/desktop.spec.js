@@ -72,6 +72,8 @@ test('Передача с мобильной страницы и печать б
         win.webContents.print = (options, callback) => { globalThis.testPrint = options; callback(false, 'Print job canceled'); };
       });
     });
+    await page.locator('#label-size').fill('40');
+    await page.locator('#size').fill('38');
     await page.locator('#copies').fill('3');
     await page.locator('#print').click();
     await expect(page.locator('#printer')).toHaveValue('Test TSC');
@@ -79,7 +81,7 @@ test('Передача с мобильной страницы и печать б
     await page.locator('#confirm-print').click();
     await expect(page.locator('#print-status')).toHaveText('Печать отменена.');
     const options = await application.evaluate(() => globalThis.testPrint);
-    expect(options.pageSize).toEqual({ width: 20000, height: 20000 });
+    expect(options.pageSize).toEqual({ width: 40000, height: 40000 });
     expect(options.scaleFactor).toBe(100); expect(options.copies).toBe(1); expect(options.silent).toBe(false);
     await page.locator('#close-print').click();
     await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].webContents.getPrintersAsync = async () => []; });

@@ -56,3 +56,5 @@ pre{border:1px solid #fff;background:#ffffff7a;border-radius:10px}details{margin
 #phone:not(:disabled):hover{background:#295aaa;border-color:#1c478c;color:#fff;box-shadow:0 0 0 3px #3264b92b,0 4px 10px #244c9f36}
 #phone:not(:disabled):active{background:#163c7b;border-color:#10316a;color:#fff;box-shadow:inset 0 3px 7px #06183865}
 .upload:has(#photo:focus-visible) label[for="photo"],.upload:has(#camera:focus-visible) label[for="camera"]{outline:3px solid #164bac;outline-offset:3px}
+
+.label-size-field{grid-column:1 / -1}

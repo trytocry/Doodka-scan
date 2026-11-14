@@ -19,10 +19,15 @@ function update() {
   currentPlan = null; $('download').disabled = true; $('validation').textContent = '';
   if ($('print')) $('print').disabled = true;
   const count = Number($('copies').value);
+  const labelSize = Number($('label-size').value);
+  const validLabel = Number.isInteger(labelSize) && labelSize >= 20 && labelSize <= 100;
+  $('size').max = validLabel ? labelSize : 100;
+  document.querySelector('.dimension').textContent = validLabel ? `${labelSize} × ${labelSize} мм` : '—';
+  $('pdf-format').textContent = validLabel ? `PDF · ${labelSize} × ${labelSize} мм` : 'PDF · проверьте размер';
   $('page-count').textContent = Number.isInteger(count) && count > 0 && count <= 500 ? count : '—';
   if (!matrix) return;
   try {
-    currentPlan = layout(matrix, Number($('size').value), count);
+    currentPlan = layout(matrix, Number($('size').value), count, labelSize);
     drawLabel($('qr'), matrix, currentPlan); $('qr').hidden = false; $('empty').hidden = true;
     $('actual').textContent = `Фактический размер с полем: ${currentPlan.actual.toLocaleString('ru-RU')} мм. Выровнен по точкам печати 203 dpi.`;
     $('download').disabled = busy;
@@ -65,13 +70,13 @@ async function readPhoto(file) {
 for (const id of ['photo', 'camera']) $(id).addEventListener('change', event => { const file = event.target.files[0]; if (file) readPhoto(file); event.target.value = ''; });
 setupPhotoInput({ zone: document.querySelector('.upload'), accept: readPhoto, reject: message => status(message, 'error') });
 const restoredSettings = loadSettings();
-$('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
-for (const id of ['size', 'copies']) $(id).addEventListener('input', () => {
-  saveSettings({ version: 1, size: Number($('size').value), copies: Number($('copies').value) });
+$('label-size').value = restoredSettings.labelSize; $('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
+for (const id of ['label-size', 'size', 'copies']) $(id).addEventListener('input', () => {
+  saveSettings({ version: 1, labelSize: Number($('label-size').value), size: Number($('size').value), copies: Number($('copies').value) });
   update();
 });
 $('reset-settings').onclick = () => {
-  $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
+  $('label-size').value = DEFAULT_SETTINGS.labelSize; $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
   saveSettings(DEFAULT_SETTINGS); update();
 };
 update();
@@ -80,7 +85,7 @@ $('download').addEventListener('click', async () => {
   const selectedMatrix = matrix, selectedPlan = currentPlan;
   busy = true; $('download').disabled = true; $('download').textContent = 'Создаём PDF…';
   await new Promise(resolve => setTimeout(resolve, 30));
-  try { createPDF(selectedMatrix, selectedPlan).save(`qr-20x20-${selectedPlan.copies}pcs.pdf`); }
+  try { createPDF(selectedMatrix, selectedPlan).save(`qr-${selectedPlan.labelSize}x${selectedPlan.labelSize}-${selectedPlan.copies}pcs.pdf`); }
   catch { status('Не удалось сохранить PDF. Попробуйте уменьшить количество копий.', 'error'); }
   finally { busy = false; $('download').textContent = 'Скачать PDF'; update(); }
 });
@@ -147,14 +152,14 @@ if (window.desktop) {
     if (matrix) phoneDialog.close();
   });
   const printDialog = document.createElement('dialog'); printDialog.className = 'desktop-dialog';
-  printDialog.innerHTML = '<h2>Печать наклеек</h2><label for="printer">Принтер</label><select id="printer"></select><p id="print-summary"></p><p class="hint">В системном диалоге проверьте носитель 20 × 20 мм и масштаб 100%. Число копий там оставьте 1: программа уже подготовила нужное число страниц.</p><p id="print-status" role="status"></p><div class="dialog-actions"><button id="confirm-print" class="button">Открыть диалог печати</button><button id="close-print" class="button secondary">Отмена</button></div>';
+  printDialog.innerHTML = '<h2>Печать наклеек</h2><label for="printer">Принтер</label><select id="printer"></select><p id="print-summary"></p><p class="hint">В системном диалоге выберите размер носителя, указанный выше, и масштаб 100%. Число копий там оставьте 1: программа уже подготовила нужное число страниц.</p><p id="print-status" role="status"></p><div class="dialog-actions"><button id="confirm-print" class="button">Открыть диалог печати</button><button id="close-print" class="button secondary">Отмена</button></div>';
   document.body.append(printDialog);
   let job;
   printButton.onclick = async () => {
     if (!matrix || !currentPlan) return;
-    job = { size: matrix.size, bits: Array.from(matrix.data), moduleDots: currentPlan.moduleDots, offset: currentPlan.offset, copies: currentPlan.copies };
+    job = { labelSize: currentPlan.labelSize, size: matrix.size, bits: Array.from(matrix.data), moduleDots: currentPlan.moduleDots, offset: currentPlan.offset, copies: currentPlan.copies };
     $('confirm-print').disabled = true; $('print-status').textContent = 'Ищем установленные принтеры…'; $('printer').replaceChildren();
-    $('print-summary').textContent = `Наклеек: ${job.copies}. Размер страницы: 20 × 20 мм.`; printDialog.showModal();
+    $('print-summary').textContent = `Наклеек: ${job.copies}. Размер страницы: ${job.labelSize} × ${job.labelSize} мм.`; printDialog.showModal();
     try {
       const printers = await window.desktop.printers();
       $('printer').replaceChildren(...printers.map(p => new Option(p.displayName || p.name, p.name, p.isDefault, p.isDefault)));
