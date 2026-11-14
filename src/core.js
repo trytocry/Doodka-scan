@@ -18,34 +18,36 @@ export function makeMatrix(decoded) {
   return QRCode.create(segments, { errorCorrectionLevel: 'M' }).modules;
 }
 
-export function layout(matrix, size, copies, labelSize = 20) {
-  if (!Number.isInteger(labelSize) || labelSize < 20 || labelSize > 100) throw new Error('Размер этикетки должен быть целым числом от 20 до 100 мм.');
+export function layout(matrix, size, copies, labelWidth = 20, labelHeight = labelWidth) {
+  if (![labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 20 && v <= 100)) throw new Error('Ширина и высота этикетки должны быть целыми числами от 20 до 100 мм.');
+  const labelSize = Math.min(labelWidth, labelHeight);
   if (!Number.isFinite(size) || size < 8 || size > labelSize) throw new Error(`Размер кода должен быть от 8 до ${labelSize} мм и не больше этикетки.`);
   if (!Number.isInteger(copies) || copies < 1 || copies > 500) throw new Error('Укажите целое количество от 1 до 500.');
   const moduleDots = Math.floor((size * 8 + 1e-8) / (matrix.size + 8));
   if (moduleDots < 2) throw new Error('Этот код слишком плотный для выбранного размера. Увеличьте размер; если это не помогает, нужна более крупная этикетка.');
   const totalDots = (matrix.size + 8) * moduleDots;
-  return { moduleDots, totalDots, actual: totalDots / 8, offset: Math.floor((labelSize * 8 - totalDots) / 2), copies, labelSize };
+  return { moduleDots, totalDots, actual: totalDots / 8, offset: Math.floor((labelWidth * 8 - totalDots) / 2), offsetY: Math.floor((labelHeight * 8 - totalDots) / 2), copies, labelWidth, labelHeight };
 }
 
 export function drawLabel(canvas, matrix, plan) {
-  canvas.width = canvas.height = plan.labelSize * 8;
+  canvas.width = plan.labelWidth * 8; canvas.height = plan.labelHeight * 8;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#000';
   for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
-    if (matrix.get(y, x)) ctx.fillRect(plan.offset + (x + 4) * plan.moduleDots, plan.offset + (y + 4) * plan.moduleDots, plan.moduleDots, plan.moduleDots);
+    if (matrix.get(y, x)) ctx.fillRect(plan.offset + (x + 4) * plan.moduleDots, plan.offsetY + (y + 4) * plan.moduleDots, plan.moduleDots, plan.moduleDots);
   }
 }
 
 export function createPDF(matrix, plan) {
-  const pdf = new jsPDF({ unit: 'mm', format: [plan.labelSize, plan.labelSize], compress: true, precision: 6 });
-  pdf.setProperties({ title: `QR labels ${plan.labelSize}x${plan.labelSize} mm` });
+  const orientation = plan.labelWidth > plan.labelHeight ? 'landscape' : 'portrait';
+  const pdf = new jsPDF({ orientation, unit: 'mm', format: [plan.labelWidth, plan.labelHeight], compress: true, precision: 6 });
+  pdf.setProperties({ title: `QR labels ${plan.labelWidth}x${plan.labelHeight} mm` });
   for (let page = 0; page < plan.copies; page++) {
-    if (page) pdf.addPage([plan.labelSize, plan.labelSize]);
+    if (page) pdf.addPage([plan.labelWidth, plan.labelHeight], orientation);
     pdf.setFillColor(0, 0, 0);
     for (let y = 0; y < matrix.size; y++) for (let x = 0; x < matrix.size; x++) {
-      if (matrix.get(y, x)) pdf.rect((plan.offset + (x + 4) * plan.moduleDots) / 8, (plan.offset + (y + 4) * plan.moduleDots) / 8, plan.moduleDots / 8, plan.moduleDots / 8, 'F');
+      if (matrix.get(y, x)) pdf.rect((plan.offset + (x + 4) * plan.moduleDots) / 8, (plan.offsetY + (y + 4) * plan.moduleDots) / 8, plan.moduleDots / 8, plan.moduleDots / 8, 'F');
     }
   }
   return pdf;

@@ -1,6 +1,6 @@
 {
   "name": "doodka-scan",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "QR и Data Matrix с фотографий: наклейки от 20 до 100 мм, PDF и печать",
   "main": "index.js",
   "scripts": {

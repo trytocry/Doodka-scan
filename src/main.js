@@ -19,15 +19,22 @@ function update() {
   currentPlan = null; $('download').disabled = true; $('validation').textContent = '';
   if ($('print')) $('print').disabled = true;
   const count = Number($('copies').value);
-  const labelSize = Number($('label-size').value);
-  const validLabel = Number.isInteger(labelSize) && labelSize >= 20 && labelSize <= 100;
+  const labelWidth = Number($('label-width').value), labelHeight = Number($('label-height').value);
+  const labelSize = Math.min(labelWidth, labelHeight);
+  const validLabel = [labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 20 && v <= 100);
   $('size').max = validLabel ? labelSize : 100;
-  document.querySelector('.dimension').textContent = validLabel ? `${labelSize} × ${labelSize} мм` : '—';
-  $('pdf-format').textContent = validLabel ? `PDF · ${labelSize} × ${labelSize} мм` : 'PDF · проверьте размер';
+  document.querySelector('.dimension').textContent = validLabel ? `${labelWidth} × ${labelHeight} мм` : '—';
+  $('pdf-format').textContent = validLabel ? `PDF · ${labelWidth} × ${labelHeight} мм` : 'PDF · проверьте размер';
   $('page-count').textContent = Number.isInteger(count) && count > 0 && count <= 500 ? count : '—';
+  const sheet = document.querySelector('.label-sheet');
+  const scale = 192 / Math.max(validLabel ? labelWidth : 20, validLabel ? labelHeight : 20);
+  sheet.style.width = `${(validLabel ? labelWidth : 20) * scale}px`;
+  sheet.style.height = `${(validLabel ? labelHeight : 20) * scale}px`;
+  sheet.classList.toggle('compact-empty', validLabel && Math.max(labelWidth, labelHeight) / Math.min(labelWidth, labelHeight) > 2);
+  document.querySelector('.dimension').style.width = sheet.style.width;
   if (!matrix) return;
   try {
-    currentPlan = layout(matrix, Number($('size').value), count, labelSize);
+    currentPlan = layout(matrix, Number($('size').value), count, labelWidth, labelHeight);
     drawLabel($('qr'), matrix, currentPlan); $('qr').hidden = false; $('empty').hidden = true;
     $('actual').textContent = `Фактический размер с полем: ${currentPlan.actual.toLocaleString('ru-RU')} мм. Выровнен по точкам печати 203 dpi.`;
     $('download').disabled = busy;
@@ -70,13 +77,13 @@ async function readPhoto(file) {
 for (const id of ['photo', 'camera']) $(id).addEventListener('change', event => { const file = event.target.files[0]; if (file) readPhoto(file); event.target.value = ''; });
 setupPhotoInput({ zone: document.querySelector('.upload'), accept: readPhoto, reject: message => status(message, 'error') });
 const restoredSettings = loadSettings();
-$('label-size').value = restoredSettings.labelSize; $('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
-for (const id of ['label-size', 'size', 'copies']) $(id).addEventListener('input', () => {
-  saveSettings({ version: 1, labelSize: Number($('label-size').value), size: Number($('size').value), copies: Number($('copies').value) });
+$('label-width').value = restoredSettings.labelWidth; $('label-height').value = restoredSettings.labelHeight; $('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
+for (const id of ['label-width', 'label-height', 'size', 'copies']) $(id).addEventListener('input', () => {
+  saveSettings({ version: 1, labelWidth: Number($('label-width').value), labelHeight: Number($('label-height').value), size: Number($('size').value), copies: Number($('copies').value) });
   update();
 });
 $('reset-settings').onclick = () => {
-  $('label-size').value = DEFAULT_SETTINGS.labelSize; $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
+  $('label-width').value = DEFAULT_SETTINGS.labelWidth; $('label-height').value = DEFAULT_SETTINGS.labelHeight; $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
   saveSettings(DEFAULT_SETTINGS); update();
 };
 update();
@@ -85,7 +92,7 @@ $('download').addEventListener('click', async () => {
   const selectedMatrix = matrix, selectedPlan = currentPlan;
   busy = true; $('download').disabled = true; $('download').textContent = 'Создаём PDF…';
   await new Promise(resolve => setTimeout(resolve, 30));
-  try { createPDF(selectedMatrix, selectedPlan).save(`qr-${selectedPlan.labelSize}x${selectedPlan.labelSize}-${selectedPlan.copies}pcs.pdf`); }
+  try { createPDF(selectedMatrix, selectedPlan).save(`qr-${selectedPlan.labelWidth}x${selectedPlan.labelHeight}-${selectedPlan.copies}pcs.pdf`); }
   catch { status('Не удалось сохранить PDF. Попробуйте уменьшить количество копий.', 'error'); }
   finally { busy = false; $('download').textContent = 'Скачать PDF'; update(); }
 });
@@ -157,9 +164,9 @@ if (window.desktop) {
   let job;
   printButton.onclick = async () => {
     if (!matrix || !currentPlan) return;
-    job = { labelSize: currentPlan.labelSize, size: matrix.size, bits: Array.from(matrix.data), moduleDots: currentPlan.moduleDots, offset: currentPlan.offset, copies: currentPlan.copies };
+    job = { labelWidth: currentPlan.labelWidth, labelHeight: currentPlan.labelHeight, offsetY: currentPlan.offsetY, size: matrix.size, bits: Array.from(matrix.data), moduleDots: currentPlan.moduleDots, offset: currentPlan.offset, copies: currentPlan.copies };
     $('confirm-print').disabled = true; $('print-status').textContent = 'Ищем установленные принтеры…'; $('printer').replaceChildren();
-    $('print-summary').textContent = `Наклеек: ${job.copies}. Размер страницы: ${job.labelSize} × ${job.labelSize} мм.`; printDialog.showModal();
+    $('print-summary').textContent = `Наклеек: ${job.copies}. Размер страницы: ${job.labelWidth} × ${job.labelHeight} мм.`; printDialog.showModal();
     try {
       const printers = await window.desktop.printers();
       $('printer').replaceChildren(...printers.map(p => new Option(p.displayName || p.name, p.name, p.isDefault, p.isDefault)));

@@ -144,7 +144,7 @@ test('QA: параметры и выключенные автообновлен�
     await expect(session.page.locator('#page-count')).toHaveText('7');
     await expect(session.page.locator('#auto-updates')).not.toBeChecked();
     const saved = await session.page.evaluate(() => JSON.parse(localStorage.getItem('qr-duplicator.label-settings.v1')));
-    expect(Object.keys(saved).sort()).toEqual(['copies', 'labelSize', 'size', 'version']);
+    expect(Object.keys(saved).sort()).toEqual(['copies', 'labelHeight', 'labelWidth', 'size', 'version']);
     await session.page.locator('#reset-settings').click();
     await session.application.close();
     session = await launch(directory, true);
