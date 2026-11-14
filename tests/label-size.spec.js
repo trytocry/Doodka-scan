@@ -27,7 +27,7 @@ test('Прямоугольные этикетки: ориентация, цен�
     }
   }
   expect(loadSettings({ getItem: () => JSON.stringify({ version: 1, size: 38, copies: 2, labelSize: 40 }) }))
-    .toEqual({ version: 1, size: 38, copies: 2, labelWidth: 40, labelHeight: 40 });
+    .toEqual({ version: 1, size: 38, copies: 2, labelWidth: 40, labelHeight: 40, fitLabel: false });
   await page.goto('/');
   await page.locator('#label-width').fill('40');
   await page.locator('#label-height').fill('30');
@@ -121,5 +121,5 @@ test('Размеры PDF и печатных страниц совпадают: 
   expect(() => layout(matrix, 41, 1, 40)).toThrow();
   expect(() => layout(matrix, 18, 1, 101)).toThrow();
   expect(loadSettings({ getItem: () => JSON.stringify({ version: 1, size: 16, copies: 7 }) }))
-    .toEqual({ version: 1, size: 16, copies: 7, labelWidth: 20, labelHeight: 20 });
+    .toEqual({ version: 1, size: 16, copies: 7, labelWidth: 20, labelHeight: 20, fitLabel: false });
 });

@@ -79,7 +79,7 @@ test('Параметры восстанавливаются, PDF использ�
   const pdf = await PDFDocument.load(await fs.readFile(await (await waiting).path()));
   expect(pdf.getPageCount()).toBe(7);
   expect(pdf.getPage(0).getWidth() * 25.4 / 72).toBeCloseTo(20, 4);
-  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), SETTINGS_KEY)).toEqual({ version: 1, size: 16, copies: 7, labelWidth: 20, labelHeight: 20 });
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), SETTINGS_KEY)).toEqual({ version: 1, size: 16, copies: 7, labelWidth: 20, labelHeight: 20, fitLabel: false });
   await page.locator('#reset-settings').click();
   await expect(page.locator('#decoded')).toHaveText('saved-settings');
   await expect(page.locator('#size')).toHaveValue('18'); await expect(page.locator('#copies')).toHaveValue('1');
@@ -94,7 +94,7 @@ test('Повреждённые настройки и отказ хранилищ
     await expect(page.locator('#size')).toHaveValue('18'); await expect(page.locator('#copies')).toHaveValue('1');
   }
   const brokenStorage = { getItem() { throw Error('denied'); }, setItem() { throw Error('denied'); } };
-  expect(loadSettings(brokenStorage)).toEqual({ version: 1, size: 18, copies: 1, labelWidth: 20, labelHeight: 20 });
+  expect(loadSettings(brokenStorage)).toEqual({ version: 1, size: 18, copies: 1, labelWidth: 20, labelHeight: 20, fitLabel: false });
   expect(saveSettings({ version: 1, size: 16, copies: 7 }, brokenStorage)).toBe(false);
   await page.addInitScript(() => {
     Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('denied', 'SecurityError'); } });

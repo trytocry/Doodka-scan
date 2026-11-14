@@ -23,6 +23,8 @@ function update() {
   const labelSize = Math.min(labelWidth, labelHeight);
   const validLabel = [labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 20 && v <= 100);
   $('size').max = validLabel ? labelSize : 100;
+  $('size').disabled = $('fit-label').checked;
+  $('size').value = $('fit-label').checked && validLabel ? labelSize : manualSize;
   document.querySelector('.dimension').textContent = validLabel ? `${labelWidth} × ${labelHeight} мм` : '—';
   $('pdf-format').textContent = validLabel ? `PDF · ${labelWidth} × ${labelHeight} мм` : 'PDF · проверьте размер';
   $('page-count').textContent = Number.isInteger(count) && count > 0 && count <= 500 ? count : '—';
@@ -77,12 +79,16 @@ async function readPhoto(file) {
 for (const id of ['photo', 'camera']) $(id).addEventListener('change', event => { const file = event.target.files[0]; if (file) readPhoto(file); event.target.value = ''; });
 setupPhotoInput({ zone: document.querySelector('.upload'), accept: readPhoto, reject: message => status(message, 'error') });
 const restoredSettings = loadSettings();
+let manualSize = restoredSettings.size;
+$('fit-label').checked = restoredSettings.fitLabel;
 $('label-width').value = restoredSettings.labelWidth; $('label-height').value = restoredSettings.labelHeight; $('size').value = restoredSettings.size; $('copies').value = restoredSettings.copies;
-for (const id of ['label-width', 'label-height', 'size', 'copies']) $(id).addEventListener('input', () => {
-  saveSettings({ version: 1, labelWidth: Number($('label-width').value), labelHeight: Number($('label-height').value), size: Number($('size').value), copies: Number($('copies').value) });
+for (const id of ['label-width', 'label-height', 'size', 'copies', 'fit-label']) $(id).addEventListener('input', () => {
+  if (id === 'size') manualSize = $('size').value;
   update();
+  saveSettings({ version: 1, labelWidth: Number($('label-width').value), labelHeight: Number($('label-height').value), size: Number(manualSize), fitLabel: $('fit-label').checked, copies: Number($('copies').value) });
 });
 $('reset-settings').onclick = () => {
+  manualSize = DEFAULT_SETTINGS.size; $('fit-label').checked = false;
   $('label-width').value = DEFAULT_SETTINGS.labelWidth; $('label-height').value = DEFAULT_SETTINGS.labelHeight; $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
   saveSettings(DEFAULT_SETTINGS); update();
 };

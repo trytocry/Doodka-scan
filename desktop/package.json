@@ -1,6 +1,6 @@
 {
   "name": "qr-etiketka",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "description": "QR и Data Matrix с фотографий: наклейки от 20 до 100 мм, PDF и печать",
   "main": "main.cjs",
   "author": "TryTocry",
