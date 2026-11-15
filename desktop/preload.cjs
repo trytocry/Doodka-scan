@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('desktop', {
   startPhone: () => ipcRenderer.invoke('phone:start'),
   stopPhone: () => ipcRenderer.invoke('phone:stop'),
   printers: () => ipcRenderer.invoke('printers:list'),
+  paperDriver: data => ipcRenderer.invoke('printers:paper', data),
   print: data => ipcRenderer.invoke('labels:print', data),
   updateState: () => ipcRenderer.invoke('updates:get'),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),

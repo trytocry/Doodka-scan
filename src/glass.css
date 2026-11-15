@@ -62,3 +62,5 @@ pre{border:1px solid #fff;background:#ffffff7a;border-radius:10px}details{margin
 .label-sheet{border:0}.label-sheet.compact-empty #empty p{display:none}
 
 .fit-label-option{display:flex;align-items:center;gap:10px;margin-top:18px;padding:12px;border:1px solid #8298ba;border-radius:12px;background:#f4f8ff;color:#203c64;font-size:14px;font-weight:600;cursor:pointer}.fit-label-option:hover{background:#e2edff;border-color:#416aa6}.fit-label-option input{width:20px;height:20px;accent-color:#215cce;flex-shrink:0}.input-unit:has(input:disabled){background:#e1e9f4;border-style:dashed}.input-unit input:disabled{color:#476181;cursor:not-allowed}
+
+.driver-paper-button{width:100%;margin:0 0 18px}.paper-dialog{width:min(620px,calc(100vw - 32px))}.paper-dialog select{width:100%;min-width:0;font-size:15px;background:#fbfdff;color:#203c64;border:2px solid #8298ba;border-radius:10px;padding:10px;margin:8px 0 16px}.paper-dialog label{display:block;font-size:14px;font-weight:600}.paper-dialog .dialog-actions{flex-wrap:wrap}.paper-dialog #paper-current,.paper-dialog #paper-message{font-size:13px;line-height:1.5;overflow-wrap:anywhere}

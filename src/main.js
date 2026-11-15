@@ -7,6 +7,7 @@ import { makeMatrix, layout, drawLabel, createPDF } from './core.js';
 import './style.css';
 import './glass.css';
 import { setupReadiness } from './readiness.js';
+import { setupDriverPaper } from './driver-paper.js';
 setupReadiness();
 const $ = id => document.getElementById(id);
 let matrix = null, currentPlan = null, generation = 0, busy = false;
@@ -21,7 +22,7 @@ function update() {
   const count = Number($('copies').value);
   const labelWidth = Number($('label-width').value), labelHeight = Number($('label-height').value);
   const labelSize = Math.min(labelWidth, labelHeight);
-  const validLabel = [labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 20 && v <= 100);
+  const validLabel = [labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 18 && v <= 100);
   $('size').max = validLabel ? labelSize : 100;
   $('size').disabled = $('fit-label').checked;
   $('size').value = $('fit-label').checked && validLabel ? labelSize : manualSize;
@@ -92,6 +93,12 @@ $('reset-settings').onclick = () => {
   $('label-width').value = DEFAULT_SETTINGS.labelWidth; $('label-height').value = DEFAULT_SETTINGS.labelHeight; $('size').value = DEFAULT_SETTINGS.size; $('copies').value = DEFAULT_SETTINGS.copies;
   saveSettings(DEFAULT_SETTINGS); update();
 };
+const driverPaper = setupDriverPaper((width, height) => {
+  $('label-width').value = width; $('label-height').value = height;
+  manualSize = Math.min(Number(manualSize) || 18, width, height);
+  update();
+  saveSettings({ version: 1, labelWidth: width, labelHeight: height, size: Number(manualSize), fitLabel: $('fit-label').checked, copies: Number($('copies').value) });
+});
 update();
 $('download').addEventListener('click', async () => {
   if (!matrix || !currentPlan || busy) return;
@@ -176,6 +183,7 @@ if (window.desktop) {
     try {
       const printers = await window.desktop.printers();
       $('printer').replaceChildren(...printers.map(p => new Option(p.displayName || p.name, p.name, p.isDefault, p.isDefault)));
+      if (printers.some(p => p.name === driverPaper.preferredPrinter())) $('printer').value = driverPaper.preferredPrinter();
       $('confirm-print').disabled = !printers.length;
       $('print-status').textContent = printers.length ? '' : 'Принтеров нет. Установите драйвер принтера в Windows или сохраните PDF.';
     } catch (e) { $('print-status').textContent = 'Не удалось получить принтеры: ' + e.message; }

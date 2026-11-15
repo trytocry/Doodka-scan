@@ -119,9 +119,22 @@ app.whenReady().then(() => {
     const answer = await dialog.showMessageBox(window, { type: 'question', title: 'Установить обновление', message: 'Перезапустить программу и установить обновление?', detail: 'Текущий снимок не сохраняется между запусками. Сохраните PDF, если он вам нужен.', buttons: ['Обновить', 'Позже'], defaultId: 1, cancelId: 1 });
     if (answer.response === 0) updates.install();
   });
+  let paperBusy = false;
+  handle('printers:paper', async data => {
+    if (paperBusy || printing) throw Error('Дождитесь завершения операции с принтером.');
+    const printers = await window.webContents.getPrintersAsync();
+    if (!data || !printers.some(p => p.name === data.printer)) throw Error('Принтер не найден.');
+    if (paperBusy || printing) throw Error('Дождитесь завершения операции с принтером.');
+    paperBusy = true;
+    try {
+      const handle = window.getNativeWindowHandle();
+      const owner = handle.length >= 8 ? handle.readBigUInt64LE().toString() : String(handle.readUInt32LE());
+      return await require('./paper-driver.cjs').runDriver({ printer: data.printer, action: data.action, stockId: data.stockId, owner }, { resourcesPath: app.isPackaged ? process.resourcesPath : undefined });
+    } finally { paperBusy = false; }
+  });
   handle('printers:list', async () => (await window.webContents.getPrintersAsync()).map(p => ({ name: p.name, displayName: p.displayName, isDefault: p.isDefault })));
   handle('labels:print', async data => {
-    if (printing) throw Error('Дождитесь завершения предыдущего задания.');
+    if (printing || paperBusy) throw Error('Дождитесь завершения предыдущей операции с принтером.');
     const html = printHTML(data);
     const printers = await window.webContents.getPrintersAsync();
     if (!printers.some(p => p.name === data.deviceName)) throw Error('Принтер не найден. Проверьте драйвер и подключение.');

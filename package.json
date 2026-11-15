@@ -1,7 +1,7 @@
 {
   "name": "doodka-scan",
-  "version": "1.5.6",
-  "description": "QR и Data Matrix с фотографий: наклейки от 20 до 100 мм, PDF и печать",
+  "version": "1.6.0",
+  "description": "QR и Data Matrix: профили бумаги Windows, наклейки от 18 до 100 мм, PDF и печать",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

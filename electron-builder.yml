@@ -11,6 +11,10 @@ files:
   - app/**/*
 asar: true
 extraResources:
+  - from: desktop/printer-driver.ps1
+    to: printer-driver.ps1
+  - from: desktop/printer-driver.cs
+    to: printer-driver.cs
   - from: desktop/app-update.yml
     to: app-update.yml
 win:

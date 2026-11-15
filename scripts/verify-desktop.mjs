@@ -12,3 +12,5 @@ for (const asset of ['/splash.html', '/app/assets/splash-glass.png', '/app/asset
 }
 if (!existsSync('release/win-unpacked/QR Duplicator.exe')) throw Error('EXE не найден');
 console.log('Проверены EXE, встроенный updater и адрес GitHub Releases.');
+
+for (const name of ['printer-driver.cs', 'printer-driver.ps1']) { if (!existsSync(`${resources}/${name}`)) throw Error(`Missing driver component: ${name}`); }

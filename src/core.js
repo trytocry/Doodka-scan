@@ -19,7 +19,7 @@ export function makeMatrix(decoded) {
 }
 
 export function layout(matrix, size, copies, labelWidth = 20, labelHeight = labelWidth) {
-  if (![labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 20 && v <= 100)) throw new Error('Ширина и высота этикетки должны быть целыми числами от 20 до 100 мм.');
+  if (![labelWidth, labelHeight].every(v => Number.isInteger(v) && v >= 18 && v <= 100)) throw new Error('Ширина и высота этикетки должны быть целыми числами от 18 до 100 мм.');
   const labelSize = Math.min(labelWidth, labelHeight);
   if (!Number.isFinite(size) || size < 8 || size > labelSize) throw new Error(`Размер кода должен быть от 8 до ${labelSize} мм и не больше этикетки.`);
   if (!Number.isInteger(copies) || copies < 1 || copies > 500) throw new Error('Укажите целое количество от 1 до 500.');

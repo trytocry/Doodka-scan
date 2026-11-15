@@ -101,7 +101,7 @@ test('40 мм: предпросмотр, PDF, сохранение и огран
 
 test('Размеры PDF и печатных страниц совпадают: 20, 40, 100 мм', async ({ page }) => {
   const matrix = QRCode.create('label-size-boundaries').modules;
-  for (const labelSize of [20, 40, 100]) {
+  for (const labelSize of [18, 20, 40, 100]) {
     const plan = layout(matrix, labelSize - 2, 2, labelSize);
     expect(plan.offset).toBeGreaterThanOrEqual(0);
     expect(plan.offset + plan.totalDots).toBeLessThanOrEqual(labelSize * 8);
@@ -115,7 +115,7 @@ test('Размеры PDF и печатных страниц совпадают: 
       expect(Math.abs(sheet.getWidth() * 25.4 / 72 - labelSize)).toBeLessThan(25.4 / 96);
       expect(Math.abs(sheet.getHeight() * 25.4 / 72 - labelSize)).toBeLessThan(25.4 / 96);
     }
-    expect(() => printHTML({ ...job, labelWidth: 19 })).toThrow();
+    expect(() => printHTML({ ...job, labelWidth: 17 })).toThrow();
     expect(() => printHTML({ ...job, offset: -1 })).toThrow();
   }
   expect(() => layout(matrix, 41, 1, 40)).toThrow();
