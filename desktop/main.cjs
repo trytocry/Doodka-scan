@@ -121,16 +121,16 @@ app.whenReady().then(() => {
   });
   let paperBusy = false;
   handle('printers:paper', async data => {
-    if (paperBusy || printing) throw Error('Дождитесь завершения операции с принтером.');
     const printers = await window.webContents.getPrintersAsync();
     if (!data || !printers.some(p => p.name === data.printer)) throw Error('Принтер не найден.');
-    if (paperBusy || printing) throw Error('Дождитесь завершения операции с принтером.');
-    paperBusy = true;
+    const mutation = data.action !== 'list';
+    if (mutation && (paperBusy || printing)) throw Error('Дождитесь завершения операции с принтером.');
+    if (mutation) paperBusy = true;
     try {
       const handle = window.getNativeWindowHandle();
       const owner = handle.length >= 8 ? handle.readBigUInt64LE().toString() : String(handle.readUInt32LE());
       return await require('./paper-driver.cjs').runDriver({ printer: data.printer, action: data.action, stockId: data.stockId, owner }, { resourcesPath: app.isPackaged ? process.resourcesPath : undefined });
-    } finally { paperBusy = false; }
+    } finally { if (mutation) paperBusy = false; }
   });
   handle('printers:list', async () => (await window.webContents.getPrintersAsync()).map(p => ({ name: p.name, displayName: p.displayName, isDefault: p.isDefault })));
   handle('labels:print', async data => {

@@ -1,6 +1,6 @@
 {
   "name": "qr-etiketka",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "QR и Data Matrix: профили бумаги Windows, наклейки от 18 до 100 мм, PDF и печать",
   "main": "main.cjs",
   "author": "TryTocry",
