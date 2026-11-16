@@ -1,10 +1,12 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 [Console]::InputEncoding = New-Object System.Text.UTF8Encoding
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding
 try {
   $request = [Console]::In.ReadToEnd() | ConvertFrom-Json
   Add-Type -Path (Join-Path $PSScriptRoot 'printer-driver.cs')
-  $result = [PrinterDriver]::Run([string]$request.printer, [string]$request.action, [int]$request.stockId, [long]$request.owner)
+  $printing = $request.action -in @('print', 'probe-print')
+  $operation = if ($printing) { 'list' } else { [string]$request.action }
+  $result = [PrinterDriver]::Run([string]$request.printer, $operation, [int]$request.stockId, [long]$request.owner)
   # Seagull's legacy paper width includes an extra printable offset. Its
   # PrintTicket reports the label size displayed in the native driver UI.
   Add-Type -AssemblyName System.Printing
@@ -41,6 +43,14 @@ try {
       if ($null -ne $width -and $null -ne $height) { $result.width = [double]$width / 1000; $result.height = [double]$height / 1000 }
     }
   } finally { if ($queue) { $queue.Dispose() }; $server.Dispose() }
+  if ($printing) {
+    $job = $request.job
+    $matches = @($result.stocks | Where-Object { [Math]::Abs($_.width - $job.labelWidth) -lt 0.05 -and [Math]::Abs($_.height - $job.labelHeight) -lt 0.05 })
+    if (!$matches.Count) { throw "В драйвере нет профиля $($job.labelWidth) × $($job.labelHeight) мм. Выберите или создайте его через «Профили бумаги в драйвере»." }
+    $selected = $matches | Where-Object id -eq $result.currentId | Select-Object -First 1
+    if (!$selected) { $selected = $matches[0] }
+    $result = [PrinterDriver]::Print([string]$request.printer, [int]$selected.id, [int]$job.size, [int[]]$job.bits, [int]$job.moduleDots, [int]$job.offset, [int]$job.offsetY, [int]$job.copies, ($request.action -eq 'probe-print'))
+  }
   @{ ok = $true; data = $result } | ConvertTo-Json -Depth 6 -Compress
 } catch {
   @{ ok = $false; error = $_.Exception.Message } | ConvertTo-Json -Compress

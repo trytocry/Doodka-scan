@@ -68,9 +68,7 @@ test('Передача с мобильной страницы и печать б
     await expect(page.locator('#phone-address')).not.toBeVisible();
     await application.evaluate(({ BrowserWindow, app }) => {
       BrowserWindow.getAllWindows()[0].webContents.getPrintersAsync = async () => [{ name: 'Test TSC', displayName: 'Test TSC', isDefault: true }];
-      app.on('browser-window-created', (_event, win) => {
-        win.webContents.print = (options, callback) => { globalThis.testPrint = options; callback(false, 'Print job canceled'); };
-      });
+      process.mainModule.require(app.getAppPath() + '/paper-driver.cjs').runDriver = async options => { globalThis.testPrint = options; return { success: false, reason: 'Print job canceled' }; };
     });
     await page.locator('#label-width').fill('40');
     await page.locator('#label-height').fill('30');
@@ -82,8 +80,9 @@ test('Передача с мобильной страницы и печать б
     await page.locator('#confirm-print').click();
     await expect(page.locator('#print-status')).toHaveText('Печать отменена.');
     const options = await application.evaluate(() => globalThis.testPrint);
-    expect(options.pageSize).toEqual({ width: 40000, height: 30000 });
-    expect(options.scaleFactor).toBe(100); expect(options.copies).toBe(1); expect(options.silent).toBe(false);
+    expect(options.action).toBe('print'); expect(options.printer).toBe('Test TSC');
+    expect(options.job.labelWidth).toBe(40); expect(options.job.labelHeight).toBe(30);
+    expect(options.job.copies).toBe(3); expect(options.job.bits.length).toBe(options.job.size ** 2);
     await page.locator('#close-print').click();
     await application.evaluate(({ BrowserWindow }) => { BrowserWindow.getAllWindows()[0].webContents.getPrintersAsync = async () => []; });
     await page.locator('#print').click();

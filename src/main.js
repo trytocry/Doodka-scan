@@ -172,7 +172,7 @@ if (window.desktop) {
     if (matrix) phoneDialog.close();
   });
   const printDialog = document.createElement('dialog'); printDialog.className = 'desktop-dialog';
-  printDialog.innerHTML = '<h2>Печать наклеек</h2><label for="printer">Принтер</label><select id="printer"></select><p id="print-summary"></p><p class="hint">В системном диалоге выберите размер носителя, указанный выше, и масштаб 100%. Число копий там оставьте 1: программа уже подготовила нужное число страниц.</p><p id="print-status" role="status"></p><div class="dialog-actions"><button id="confirm-print" class="button">Открыть диалог печати</button><button id="close-print" class="button secondary">Отмена</button></div>';
+  printDialog.innerHTML = '<h2>Печать наклеек</h2><label for="printer">Принтер</label><select id="printer"></select><p id="print-summary"></p><p class="hint">Программа подберёт профиль бумаги в драйвере по размеру этикетки и отправит указанное число наклеек без масштабирования.</p><p id="print-status" role="status"></p><div class="dialog-actions"><button id="confirm-print" class="button">Напечатать</button><button id="close-print" class="button secondary">Отмена</button></div>';
   document.body.append(printDialog);
   let job;
   printButton.onclick = async () => {
@@ -190,7 +190,7 @@ if (window.desktop) {
   };
   $('close-print').onclick = () => printDialog.close();
   $('confirm-print').onclick = async () => {
-    $('confirm-print').disabled = true; $('print-status').textContent = 'Проверьте параметры в системном диалоге печати.';
+    $('confirm-print').disabled = true; $('print-status').textContent = 'Подбираем профиль бумаги и отправляем наклейки…';
     try {
       const result = await window.desktop.print({ ...job, deviceName: $('printer').value });
       if (result.success) { printDialog.close(); status('Задание передано в очередь печати Windows.', 'success'); }

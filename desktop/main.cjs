@@ -121,6 +121,7 @@ app.whenReady().then(() => {
   });
   let paperBusy = false;
   handle('printers:paper', async data => {
+    if (!['list', 'apply', 'edit'].includes(data?.action)) throw Error('Некорректная операция с профилем бумаги.');
     const printers = await window.webContents.getPrintersAsync();
     if (!data || !printers.some(p => p.name === data.printer)) throw Error('Принтер не найден.');
     const mutation = data.action !== 'list';
@@ -135,16 +136,13 @@ app.whenReady().then(() => {
   handle('printers:list', async () => (await window.webContents.getPrintersAsync()).map(p => ({ name: p.name, displayName: p.displayName, isDefault: p.isDefault })));
   handle('labels:print', async data => {
     if (printing || paperBusy) throw Error('Дождитесь завершения предыдущей операции с принтером.');
-    const html = printHTML(data);
+    printHTML(data);
     const printers = await window.webContents.getPrintersAsync();
     if (!printers.some(p => p.name === data.deviceName)) throw Error('Принтер не найден. Проверьте драйвер и подключение.');
     printing = true;
-    let printWindow;
     try {
-      printWindow = new BrowserWindow({ show: false, parent: window, webPreferences: { sandbox: true, nodeIntegration: false, contextIsolation: true } });
-      await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-      return await new Promise(resolve => printWindow.webContents.print({ silent: false, deviceName: data.deviceName, pageSize: { width: (data.labelWidth ?? data.labelSize ?? 20) * 1000, height: (data.labelHeight ?? data.labelSize ?? 20) * 1000 }, margins: { marginType: 'none' }, scaleFactor: 100, printBackground: true, copies: 1, pagesPerSheet: 1, duplexMode: 'simplex', color: false }, (success, reason) => resolve({ success, reason })));
-    } finally { if (printWindow && !printWindow.isDestroyed()) printWindow.destroy(); printing = false; }
+      return await require('./paper-driver.cjs').runDriver({ printer: data.deviceName, action: 'print', job: data }, { resourcesPath: app.isPackaged ? process.resourcesPath : undefined });
+    } finally { printing = false; }
   });
 });
 app.on('before-quit', () => phone.stop());

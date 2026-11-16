@@ -5,6 +5,49 @@ using System.Runtime.InteropServices;
 public class PaperStock { public int id; public string name; public double width; public double height; }
 public class PaperState { public PaperStock[] stocks; public int currentId; public double width; public double height; public bool cancelled; }
 public static class PrinterDriver {
+ [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] struct DOCINFO { public int size; public string name; public string output; public string type; public int flags; }
+ [DllImport("gdi32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern IntPtr CreateDC(string driver,string device,string output,IntPtr dm);
+ [DllImport("gdi32.dll")] static extern bool DeleteDC(IntPtr dc);
+ [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc,int index);
+ [DllImport("gdi32.dll", CharSet=CharSet.Unicode, SetLastError=true)] static extern int StartDoc(IntPtr dc,ref DOCINFO info);
+ [DllImport("gdi32.dll")] static extern int StartPage(IntPtr dc);
+ [DllImport("gdi32.dll")] static extern int EndPage(IntPtr dc);
+ [DllImport("gdi32.dll")] static extern int EndDoc(IntPtr dc);
+ [DllImport("gdi32.dll")] static extern int AbortDoc(IntPtr dc);
+ [DllImport("gdi32.dll")] static extern bool PatBlt(IntPtr dc,int x,int y,int width,int height,uint operation);
+ // Полный DEVMODE, включая закрытые настройки производителя, передаётся прямо в GDI.
+ public static object Print(string name,int stockId,int size,int[] bits,int moduleDots,int offset,int offsetY,int copies,bool probe) {
+   IntPtr h; if(!OpenPrinter(name,out h,IntPtr.Zero)) throw Error("Cannot open printer");
+   IntPtr dm=IntPtr.Zero,dc=IntPtr.Zero; bool started=false;
+   try {
+     dm=Read(h,name);
+     if(Array.Find(Stocks(name,dm),p=>p.id==stockId)==null) throw new Exception("Paper profile no longer exists.");
+     // Одна копия в драйвере: нужное число страниц формируется здесь.
+     Marshal.WriteInt32(dm,72,(Marshal.ReadInt32(dm,72)&~0x1000C)|0x1103);
+     Marshal.WriteInt16(dm,78,(short)stockId); Marshal.WriteInt16(dm,76,1);
+     Marshal.WriteInt16(dm,86,1); Marshal.WriteInt16(dm,94,1);
+     if(DocumentProperties(IntPtr.Zero,h,name,dm,dm,10)!=1 || (ushort)Marshal.ReadInt16(dm,78)!=stockId) throw new Exception("Driver rejected paper profile.");
+     dc=CreateDC("WINSPOOL",name,null,dm); if(dc==IntPtr.Zero) throw Error("Cannot create printer context");
+     int dpiX=GetDeviceCaps(dc,88),dpiY=GetDeviceCaps(dc,90),left=GetDeviceCaps(dc,112),top=GetDeviceCaps(dc,113);
+     if(dpiX<=0||dpiY<=0) throw new Exception("Invalid printer resolution.");
+     if(probe) return new {success=true,stockId=stockId,dpiX=dpiX,dpiY=dpiY,paperWidth=GetDeviceCaps(dc,110)*25.4/dpiX,paperHeight=GetDeviceCaps(dc,111)*25.4/dpiY};
+     DOCINFO info=new DOCINFO {size=Marshal.SizeOf(typeof(DOCINFO)),name="QR Duplicator"};
+     if(StartDoc(dc,ref info)<=0) throw Error("Cannot start print job"); started=true;
+     for(int page=0;page<copies;page++) {
+       if(StartPage(dc)<=0) throw Error("Cannot start label");
+       for(int y=0;y<size;y++) for(int x=0;x<size;x++) if(bits[y*size+x]==1) {
+         int x1=(int)Math.Round((offset+(x+4)*moduleDots)*dpiX/203.2)-left;
+         int y1=(int)Math.Round((offsetY+(y+4)*moduleDots)*dpiY/203.2)-top;
+         int x2=(int)Math.Round((offset+(x+5)*moduleDots)*dpiX/203.2)-left;
+         int y2=(int)Math.Round((offsetY+(y+5)*moduleDots)*dpiY/203.2)-top;
+         if(!PatBlt(dc,x1,y1,x2-x1,y2-y1,0x42)) throw Error("Cannot draw label");
+       }
+       if(EndPage(dc)<=0) throw Error("Cannot finish label");
+     }
+     if(EndDoc(dc)<=0) throw Error("Cannot submit print job"); started=false;
+     return new {success=true,stockId=stockId};
+   } finally {if(started)AbortDoc(dc);if(dc!=IntPtr.Zero)DeleteDC(dc);if(dm!=IntPtr.Zero)Marshal.FreeHGlobal(dm);ClosePrinter(h);}
+ }
  [DllImport("winspool.drv", CharSet=CharSet.Unicode, SetLastError=true)] static extern bool OpenPrinter(string name, out IntPtr printer, IntPtr defaults);
  [DllImport("winspool.drv")] static extern bool ClosePrinter(IntPtr printer);
  [DllImport("winspool.drv", CharSet=CharSet.Unicode)] static extern int DocumentProperties(IntPtr owner, IntPtr printer, string name, IntPtr output, IntPtr input, int mode);
